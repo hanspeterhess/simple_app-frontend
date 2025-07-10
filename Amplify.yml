@@ -1,0 +1,29 @@
+# This amplify.yml file should be placed at the ROOT of your new Git repository
+# which now contains ONLY your frontend application code.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Install all dependencies for the frontend application.
+        - yarn install
+    build:
+      commands:
+        # Run the build command for your frontend application.
+        - yarn build
+  artifacts:
+    # baseDirectory is relative to the repository root.
+    # IMPORTANT: Adjust to 'build' if your React app (e.g., Create React App) builds to 'build' folder.
+    # Keep 'dist' if your build process (e.g., Vite, custom Webpack) outputs to 'dist'.
+    baseDirectory: dist # <--- IMPORTANT: Adjust if your React app builds to 'build' folder
+    files:
+      - '**/*'
+  cache:
+    # Cache paths are relative to the repository root.
+    paths:
+      - node_modules/**/*
+      - ~/.yarn_cache/**/* # Yarn's global cache
+  # Specify the Node.js runtime version for the build environment.
+  # This is crucial to avoid "incompatible Node.js engine" errors.
+  runtime-versions:
+    nodejs: 20
