@@ -82,7 +82,7 @@ function App() {
       setStoredTime(time);
     });
 
-    socket.on("image-blurred", ({ blurredKey, originalKey }) => {
+    socket.on("image-blurred", async ({ blurredKey, originalKey }) => {
       console.log('🖼️ Received blurred image notification:', blurredKey);
       
       // Construct the public S3 URL for the blurred image
