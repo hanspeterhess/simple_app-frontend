@@ -79,7 +79,7 @@ function App() {
     const { url: uploadUrl, fileName: receivedFileName } = uploadUrlResponse.data;
   
     // For displaying the original image URL in the UI
-    setUploadedImageUrl(uploadUrl.split("?")[0]);
+    setOriginalDisplayUrl(uploadUrl.split("?")[0]);
   
     // Log the fileName received from backend for debugging
     console.log("Frontend: Received fileName from backend:", receivedFileName);
