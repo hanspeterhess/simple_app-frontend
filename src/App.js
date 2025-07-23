@@ -204,7 +204,7 @@ function App() {
         <h2 style={{ color: '#34495e' }}>Image Blurring Service</h2>
         <input
           type="file"
-          accept="image/*"
+          accept=" .nii, .nii.gz"
           onChange={(e) => setImageFile(e.target.files[0])}
           style={{ display: 'block', margin: '15px auto', padding: '10px', border: '1px solid #ccc', borderRadius: '5px' }}
         />
@@ -230,22 +230,12 @@ function App() {
         {originalDisplayUrl && (
           <div style={{ marginTop: "20px", borderTop: '1px solid #bdc3c7', paddingTop: '20px' }}>
             <p style={{ fontSize: '1.1em', color: '#34495e' }}>Original Image (from S3):</p>
-            <img
-              src={originalDisplayUrl} 
-              alt="Uploaded Original"
-              style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
-            />
           </div>
         )}
 
         {blurredImageUrl && (
           <div style={{ marginTop: "20px", borderTop: '1px solid #bdc3c7', paddingTop: '20px' }}>
             <p style={{ fontSize: '1.1em', color: '#34495e' }}>Blurred Image (from S3):</p>
-            <img
-              src={blurredImageUrl}
-              alt="Blurred"
-              style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
-            />
           </div>
         )}
       </div>
