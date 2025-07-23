@@ -50,7 +50,7 @@ function App() {
       return;
     }
 
-    try {$
+    try {
        // generate a unique filename
       const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
       
