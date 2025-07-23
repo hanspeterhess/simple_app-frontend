@@ -14,12 +14,24 @@ function App() {
   const [storedTime, setStoredTime] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+  const [originalDisplayUrl, setOriginalDisplayUrl] = useState("");
   const [blurredImageUrl, setBlurredImageUrl] = useState("");
 
   // IMPORTANT: Replace these placeholders with your actual S3 bucket name and AWS region
   // You can get these from your Pulumi outputs.
   const S3_BUCKET_NAME = "uploadbucket-5775bc9"; // update this
   const AWS_REGION = "eu-central-1"; 
+
+  // Function to fetch a presigned URL for display
+  const fetchDisplayUrl = async (key) => {
+      try {
+          const response = await axios.get(`${BACKEND_URL}/get-image-url?key=${key}`);
+          return response.data.url;
+      } catch (error) {
+          console.error(`Error fetching display URL for ${key}:`, error);
+          return ""; // Return empty string on error
+      }
+  };
 
   const handleClick = async () => {
     try {
@@ -50,8 +62,12 @@ function App() {
       });
 
       // 3. Construct the public S3 URL for preview
-      const s3BaseUrl = uploadUrl.split("?")[0];
-      setUploadedImageUrl(s3BaseUrl);
+      // const s3BaseUrl = uploadUrl.split("?")[0];
+      // setUploadedImageUrl(s3BaseUrl);
+      
+      // Tell the backend the image is ready in S3
+      socket.emit("image-uploaded-to-s3", { originalKey: fileName });
+
 
       alert("Image uploaded to S3 successfully! Processing will begin shortly.");
 
@@ -66,18 +82,26 @@ function App() {
       setStoredTime(time);
     });
 
-    socket.on("image-blurred", ({ blurredKey }) => {
+    socket.on("image-blurred", ({ blurredKey, originalKey }) => {
       console.log('🖼️ Received blurred image notification:', blurredKey);
-      // Construct the public S3 URL for the blurred image
-      const blurredS3Url = `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${blurredKey}`;
       
-      setBlurredImageUrl(blurredS3Url);
+      // Construct the public S3 URL for the blurred image
+      const newBlurredUrl = await fetchDisplayUrl(blurredKey);
+      setBlurredImageUrl(newBlurredUrl);
+
+      // fetch presigned URL for the original image for display too
+      if (originalKey) {
+          const newOriginalUrl = await fetchDisplayUrl(originalKey);
+          setOriginalDisplayUrl(newOriginalUrl); // ⬅️ SET NEW STATE
+      }
+      
       alert("Blurred image received and ready for display!");
     });
 
     return () => {
       socket.off("time-ready");
       socket.off("image-blurred");
+      socket.off("image-uploaded-to-s3");
     };
   }, []);
 
@@ -141,11 +165,11 @@ function App() {
           Upload Image to AWS S3
         </button>
 
-        {uploadedImageUrl && (
+        {originalDisplayUrl && (
           <div style={{ marginTop: "20px", borderTop: '1px solid #bdc3c7', paddingTop: '20px' }}>
             <p style={{ fontSize: '1.1em', color: '#34495e' }}>Original Image (from S3):</p>
             <img
-              src={uploadedImageUrl}
+              src={originalDisplayUrl} 
               alt="Uploaded Original"
               style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}
             />
