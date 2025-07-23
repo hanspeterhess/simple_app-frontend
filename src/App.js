@@ -14,15 +14,37 @@ const socket = io(BACKEND_URL);
 function App() {
   const [storedTime, setStoredTime] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
   const [originalDisplayUrl, setOriginalDisplayUrl] = useState("");
   const [blurredImageUrl, setBlurredImageUrl] = useState("");
 
-  // IMPORTANT: Replace these placeholders with your actual S3 bucket name and AWS region
-  // You can get these from your Pulumi outputs.
-  const S3_BUCKET_NAME = "uploadbucket-5775bc9"; // update this
-  const AWS_REGION = "eu-central-1"; 
+  //Socket.IO connection logging
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('✅ Frontend Socket.IO connected!');
+      console.log('Socket ID:', socket.id);
+    });
 
+    socket.on('disconnect', () => {
+      console.log('❌ Frontend Socket.IO disconnected!');
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('⚠️ Frontend Socket.IO connection error:', err);
+    });
+
+    // ... (rest of your useEffect content for "time-ready", "image-blurred" etc.)
+    // Make sure to return a cleanup function for these new listeners too
+    return () => {
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('connect_error');
+        // ... (rest of your existing cleanup)
+        socket.off("time-ready");
+        socket.off("image-blurred");
+        socket.off("image-uploaded-to-s3");
+    };
+  }, []);
+  
   // Function to fetch a presigned URL for display
   const fetchDisplayUrl = async (key) => {
       try {
