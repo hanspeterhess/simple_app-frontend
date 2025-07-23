@@ -72,35 +72,68 @@ function App() {
       return;
     }
 
-    try {
-       // generate a unique filename
-      const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
+  try {
+    // 1. Get presigned URL from backend
+    const uploadUrlResponse = await axios.get(`${BACKEND_URL}/get-upload-url`);
+    // Store the fileName from the backend's response!
+    const { url: uploadUrl, fileName: receivedFileName } = uploadUrlResponse.data;
+  
+    // For displaying the original image URL in the UI
+    setUploadedImageUrl(uploadUrl.split("?")[0]);
+  
+    // Log the fileName received from backend for debugging
+    console.log("Frontend: Received fileName from backend:", receivedFileName);
+  
+    // 2. Upload image directly to S3 using the presigned URL
+    await axios.put(uploadUrl, imageFile, {
+      headers: {
+        "Content-Type": imageFile.type,
+      },
+    });
+  
+    // 3. After successful S3 upload, inform backend via socket with the CORRECT fileName
+    // 💥 MAKE SURE you use 'receivedFileName' here!
+    socket.emit("image-uploaded-to-s3", { fileName: receivedFileName });
+  
+    // Update frontend console log to reflect the correct emitted key
+    console.log(`App.js:93 Frontend: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${receivedFileName}`);
+    console.log("App.js:95 Frontend: 'image-uploaded-to-s3' event emitted.");
+  
+    alert("Image uploaded successfully!");
+  } catch (err) {
+    console.error("Error uploading image:", err);
+    alert("Failed to upload image. See console for details.");
+  }  
 
-      console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
+    // try {
+    //    // generate a unique filename
+    //   const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
 
-      const response = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
-      const { uploadUrl } = response.data;
-      console.log(`Frontend: Uploading image to S3: ${uploadUrl}`);
+    //   console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
 
-      // 2. Upload the image directly to S3 using the pre-signed URL
-      await axios.put(uploadUrl, imageFile, {
-        headers: {
-          "Content-Type": imageFile.type,
-        },
-      });
+    //   const response = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
+    //   const { uploadUrl } = response.data;
+    //   console.log(`Frontend: Uploading image to S3: ${uploadUrl}`);
 
-      // Tell the backend the image is ready in S3
-      console.log(`Frontend: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${fileName}`);
-      socket.emit("image-uploaded-to-s3", { originalKey: fileName });
-      console.log(`Frontend: 'image-uploaded-to-s3' event emitted.`);
+    //   // 2. Upload the image directly to S3 using the pre-signed URL
+    //   await axios.put(uploadUrl, imageFile, {
+    //     headers: {
+    //       "Content-Type": imageFile.type,
+    //     },
+    //   });
+
+    //   // Tell the backend the image is ready in S3
+    //   console.log(`Frontend: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${fileName}`);
+    //   socket.emit("image-uploaded-to-s3", { originalKey: fileName });
+    //   console.log(`Frontend: 'image-uploaded-to-s3' event emitted.`);
 
 
-      alert("Image uploaded to S3 successfully! Processing will begin shortly.");
+    //   alert("Image uploaded to S3 successfully! Processing will begin shortly.");
 
-    } catch (err) {
-      console.error("Upload error:", err);
-      alert("Image upload failed. Check console for details.");
-    }
+    // } catch (err) {
+    //   console.error("Upload error:", err);
+    //   alert("Image upload failed. Check console for details.");
+    // }
   };
 
   useEffect(() => {
