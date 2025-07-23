@@ -75,12 +75,12 @@ function App() {
     try {
        // generate a unique filename
       const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
-      
-      // 1. Get a pre-signed S3 URL from the backend
-      //const { data } = await axios.get(`${BACKEND_URL}/upload-url`);
-      //const { uploadUrl } = data; // fileName is the S3 key
+
+      console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
+
       const response = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
       const { uploadUrl } = response.data;
+      console.log(`Frontend: Uploading image to S3: ${uploadUrl}`);
 
       // 2. Upload the image directly to S3 using the pre-signed URL
       await axios.put(uploadUrl, imageFile, {
@@ -89,12 +89,10 @@ function App() {
         },
       });
 
-      // 3. Construct the public S3 URL for preview
-      // const s3BaseUrl = uploadUrl.split("?")[0];
-      // setUploadedImageUrl(s3BaseUrl);
-      
       // Tell the backend the image is ready in S3
+      console.log(`Frontend: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${fileName}`);
       socket.emit("image-uploaded-to-s3", { originalKey: fileName });
+      console.log(`Frontend: 'image-uploaded-to-s3' event emitted.`);
 
 
       alert("Image uploaded to S3 successfully! Processing will begin shortly.");
