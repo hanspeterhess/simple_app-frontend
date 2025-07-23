@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 import axios from "axios";
+import { v4 as uuidv4 } from 'uuid';
 
 // Backend address - Read from environment variable injected by Amplify
 // During local development, you can set REACT_APP_BACKEND_URL in a .env.local file
@@ -49,10 +50,15 @@ function App() {
       return;
     }
 
-    try {
+    try {$
+       // generate a unique filename
+      const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
+      
       // 1. Get a pre-signed S3 URL from the backend
-      const { data } = await axios.get(`${BACKEND_URL}/upload-url`);
-      const { uploadUrl } = data; // fileName is the S3 key
+      //const { data } = await axios.get(`${BACKEND_URL}/upload-url`);
+      //const { uploadUrl } = data; // fileName is the S3 key
+      const response = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
+      const { uploadUrl } = response.data;
 
       // 2. Upload the image directly to S3 using the pre-signed URL
       await axios.put(uploadUrl, imageFile, {
