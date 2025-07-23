@@ -74,7 +74,7 @@ function App() {
 
   try {
     // 1. Get presigned URL from backend
-    const uploadUrlResponse = await axios.get(`${BACKEND_URL}/get-upload-url`);
+    const uploadUrlResponse = await axios.get(`${BACKEND_URL}/get-image-url`);
     // Store the fileName from the backend's response!
     const { url: uploadUrl, fileName: receivedFileName } = uploadUrlResponse.data;
   
