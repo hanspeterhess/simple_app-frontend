@@ -63,7 +63,7 @@ function App() {
 
     try {
       // 1. Generate a unique filename on the frontend (as you had before)
-      const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
+      const fileName = `${uuidv4()}.nii.gz`;
       console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
 
       // 2. Get the presigned PUT URL from the backend's /upload-url endpoint
