@@ -66,9 +66,9 @@ function App() {
       const fileName = `${uuidv4()}.nii.gz`;
       console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
 
-      // 2. Get the presigned PUT URL from the backend's /upload-url endpoint
+      // 2. Get the presigned PUT URL from the backend's /get-upload-url endpoint
       // This endpoint will return the actual S3 key (fileName) it generated.
-      const uploadUrlResponse = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
+      const uploadUrlResponse = await axios.get(`${BACKEND_URL}/get-upload-url?fileName=${fileName}`);
       const { uploadUrl, fileName: receivedFileName } = uploadUrlResponse.data; // Use receivedFileName from backend
       
       // For displaying the original image URL in the UI
