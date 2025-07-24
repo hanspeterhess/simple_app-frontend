@@ -4,8 +4,6 @@ import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 
 // Backend address - Read from environment variable injected by Amplify
-// During local development, you can set REACT_APP_BACKEND_URL in a .env.local file
-// or directly use "http://localhost:4000" if running locally.
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
 
 // Initialize socket connection
@@ -14,46 +12,30 @@ const socket = io(BACKEND_URL);
 function App() {
   const [storedTime, setStoredTime] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  const [originalDisplayUrl, setOriginalDisplayUrl] = useState("");
-  const [blurredImageUrl, setBlurredImageUrl] = useState("");
+  const [originalFileName, setOriginalFileName] = useState("");
+  const [blurredFileName, setBlurredFileName] = useState("");
+  const [blurredDownloadUrl, setBlurredDownloadUrl] = useState(""); // NEW: State for blurred download URL
 
-  //Socket.IO connection logging
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('✅ Frontend Socket.IO connected!');
-      console.log('Socket ID:', socket.id);
-    });
 
-    socket.on('disconnect', () => {
-      console.log('❌ Frontend Socket.IO disconnected!');
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('⚠️ Frontend Socket.IO connection error:', err);
-    });
-
-    // ... (rest of your useEffect content for "time-ready", "image-blurred" etc.)
-    // Make sure to return a cleanup function for these new listeners too
-    return () => {
-        socket.off('connect');
-        socket.off('disconnect');
-        socket.off('connect_error');
-        // ... (rest of your existing cleanup)
-        socket.off("time-ready");
-        socket.off("image-blurred");
-        socket.off("image-uploaded-to-s3");
-    };
-  }, []);
-  
-  // Function to fetch a presigned URL for display
-  const fetchDisplayUrl = async (key) => {
-      try {
-          const response = await axios.get(`${BACKEND_URL}/get-image-url?key=${key}`);
-          return response.data.url;
-      } catch (error) {
-          console.error(`Error fetching display URL for ${key}:`, error);
-          return ""; // Return empty string on error
-      }
+  const handleDownloadBlurred = async () => {
+    if (!blurredDownloadUrl || !blurredFileName) {
+      alert("Blurred image not ready for download.");
+      return;
+    }
+    try {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = blurredDownloadUrl;
+      // Use blurredFileName for the suggested download name
+      link.download = `blurred_${blurredFileName}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      console.log(`✅ Download initiated for ${blurredFileName}`);
+    } catch (error) {
+      console.error("❌ Error initiating download:", error);
+      alert("Failed to initiate download.");
+    }
   };
 
   const handleClick = async () => {
@@ -72,74 +54,69 @@ function App() {
       return;
     }
 
-  try {
-    // 1. Generate a unique filename on the frontend (as you had before)
-    const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
-    console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
+    // Client-side validation for .nii.gz
+    if (!imageFile.name.toLowerCase().endsWith('.nii.gz')) {
+      alert("Only .nii.gz files are supported for upload and blurring.");
+      setImageFile(null); // Clear selected file
+      return;
+    }
 
-    // 2. Get the presigned PUT URL from the backend's /upload-url endpoint
-    // This endpoint will return the actual S3 key (fileName) it generated.
-    const uploadUrlResponse = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
-    const { uploadUrl, fileName: receivedFileName } = uploadUrlResponse.data; // Use receivedFileName from backend
-    
-    // For displaying the original image URL in the UI
-    setOriginalDisplayUrl(uploadUrl.split("?")[0]);
+    try {
+      // 1. Generate a unique filename on the frontend (as you had before)
+      const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
+      console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
 
-    // Log the fileName received from backend for debugging
-    console.log("Frontend: Received fileName from backend for upload:", receivedFileName);
+      // 2. Get the presigned PUT URL from the backend's /upload-url endpoint
+      // This endpoint will return the actual S3 key (fileName) it generated.
+      const uploadUrlResponse = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
+      const { uploadUrl, fileName: receivedFileName } = uploadUrlResponse.data; // Use receivedFileName from backend
+      
+      // For displaying the original image URL in the UI
+      setOriginalFileName(uploadUrl.split("?")[0]);
 
-    // 3. Upload image directly to S3 using the presigned URL
-    await axios.put(uploadUrl, imageFile, {
-      headers: {
-        "Content-Type": imageFile.type,
-      },
-    });
+      // Log the fileName received from backend for debugging
+      console.log("Frontend: Received fileName from backend for upload:", receivedFileName);
 
-    // 4. After successful S3 upload, inform backend via socket with the CORRECT receivedFileName
-    // This `receivedFileName` is the one the backend provided for the upload!
-    socket.emit("image-uploaded-to-s3", { originalKey: receivedFileName }); // Use originalKey here
+      // 3. Upload image directly to S3 using the presigned URL
+      await axios.put(uploadUrl, imageFile, {
+        headers: {
+          "Content-Type": imageFile.type,
+        },
+      });
 
-    console.log(`App.js:93 Frontend: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${receivedFileName}`);
-    console.log("App.js:95 Frontend: 'image-uploaded-to-s3' event emitted.");
+      // 4. After successful S3 upload, inform backend via socket with the CORRECT receivedFileName
+      socket.emit("image-uploaded-to-s3", { originalKey: receivedFileName });
 
-    alert("Image uploaded successfully!");
-  } catch (err) {
-    console.error("Error uploading image:", err);
-    alert("Failed to upload image. See console for details.");
-  }
-
-    // try {
-    //    // generate a unique filename
-    //   const fileName = `${uuidv4()}.${imageFile.name.split(".").pop()}`;
-
-    //   console.log(`Frontend: Requesting upload URL for fileName: ${fileName}`);
-
-    //   const response = await axios.get(`${BACKEND_URL}/upload-url?fileName=${fileName}`);
-    //   const { uploadUrl } = response.data;
-    //   console.log(`Frontend: Uploading image to S3: ${uploadUrl}`);
-
-    //   // 2. Upload the image directly to S3 using the pre-signed URL
-    //   await axios.put(uploadUrl, imageFile, {
-    //     headers: {
-    //       "Content-Type": imageFile.type,
-    //     },
-    //   });
-
-    //   // Tell the backend the image is ready in S3
-    //   console.log(`Frontend: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${fileName}`);
-    //   socket.emit("image-uploaded-to-s3", { originalKey: fileName });
-    //   console.log(`Frontend: 'image-uploaded-to-s3' event emitted.`);
-
-
-    //   alert("Image uploaded to S3 successfully! Processing will begin shortly.");
-
-    // } catch (err) {
-    //   console.error("Upload error:", err);
-    //   alert("Image upload failed. Check console for details.");
-    // }
+      console.log(`App.js: Image successfully PUT to S3. Emitting 'image-uploaded-to-s3' for originalKey: ${receivedFileName}`);
+      alert("File uploaded successfully! Processing will begin shortly.");
+    } catch (err) {
+      console.error("Error uploading file:", err);
+      // Check for specific backend errors (like unsupported file type)
+      if (err.response && err.response.data && err.response.data.error) {
+          alert(`Failed to upload file: ${err.response.data.error}`);
+      } else {
+          alert("Failed to upload file. See console for details.");
+      }
+    }
   };
 
+
+
+  //Socket.IO connection logging
   useEffect(() => {
+    socket.on('connect', () => {
+      console.log('✅ Frontend Socket.IO connected!');
+      console.log('Socket ID:', socket.id);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ Frontend Socket.IO disconnected!');
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('⚠️ Frontend Socket.IO connection error:', err);
+    });
+
     socket.on("time-ready", ({ time }) => {
       setStoredTime(time);
     });
@@ -148,25 +125,31 @@ function App() {
       console.log('🖼️ Received blurred image notification:', blurredKey);
       
       // Construct the public S3 URL for the blurred image
-      const newBlurredUrl = await fetchDisplayUrl(blurredKey);
-      setBlurredImageUrl(newBlurredUrl);
+      setBlurredFileName(blurredKey);
 
-      // fetch presigned URL for the original image for display too
-      if (originalKey) {
-          const newOriginalUrl = await fetchDisplayUrl(originalKey);
-          setOriginalDisplayUrl(newOriginalUrl); // ⬅️ SET NEW STATE
+      // NEW: Request presigned download URL for the blurred image
+      try {
+        const response = await axios.get(`${BACKEND_URL}/get-image-url?key=${blurredKey}`);
+        const { url } = response.data;
+        setBlurredDownloadUrl(url); // Store the presigned URL
+        console.log("✅ Frontend: Received blurred image download URL.");
+      } catch (error) {
+        console.error("❌ Frontend: Error getting blurred image download URL:", error);
+        setBlurredDownloadUrl(""); // Clear if there's an error
       }
-      
-      alert("Blurred image received and ready for display!");
+      alert("Blurred image is ready for download!");
     });
 
     return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
       socket.off("time-ready");
       socket.off("image-blurred");
       socket.off("image-uploaded-to-s3");
     };
   }, []);
-
+ 
   return (
     <div style={{ textAlign: "center", marginTop: "3rem", fontFamily: "Inter, sans-serif" }}>
       <h1 style={{ color: '#2c3e50' }}>Image Processing App</h1>
@@ -227,15 +210,30 @@ function App() {
           Upload Image to AWS S3
         </button>
 
-        {originalDisplayUrl && (
+        {/* Only show download button if a blurred file is ready */}
+        {blurredFileName && blurredDownloadUrl && (
           <div style={{ marginTop: "20px", borderTop: '1px solid #bdc3c7', paddingTop: '20px' }}>
-            <p style={{ fontSize: '1.1em', color: '#34495e' }}>Original Image (from S3):</p>
-          </div>
-        )}
-
-        {blurredImageUrl && (
-          <div style={{ marginTop: "20px", borderTop: '1px solid #bdc3c7', paddingTop: '20px' }}>
-            <p style={{ fontSize: '1.1em', color: '#34495e' }}>Blurred Image (from S3):</p>
+            <p style={{ fontSize: '1.1em', color: '#34495e' }}>
+              Blurred File: <span style={{ fontWeight: 'bold', color: '#2c3e50' }}>{blurredFileName}</span> is ready!
+            </p>
+            <button
+              onClick={handleDownloadBlurred}
+              style={{
+                marginTop: '15px',
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                transition: 'background-color 0.3s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0056b3'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#007bff'}
+            >
+              Download Blurred .nii.gz
+            </button>
           </div>
         )}
       </div>
