@@ -13,7 +13,7 @@ const socket = io(BACKEND_URL);
 // S3 Service for Frontend Interactions
 const s3FrontendService = {
   // Fetches a presigned GET URL from the backend
-  fetchDownloadUrl: async (key) => {
+  fetchDownloadUrl: async (key, token) => {
     try {
       const response = await axios.get(`${BACKEND_URL}/get-image-url?key=${key}`, {
         headers: {
