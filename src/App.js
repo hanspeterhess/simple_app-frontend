@@ -377,10 +377,9 @@ export default function App() {
       domain={process.env.REACT_APP_AUTH0_DOMAIN}
       clientId={process.env.REACT_APP_AUTH0_CLIENT_ID}
       redirectUri={window.location.origin}
-      // audience={process.env.REACT_APP_AUTH0_AUDIENCE}
       authorizationParams={{
-        audience: "https://api-t.aikeso.com", // Pass audience this way
-        scope: "openid profile email" // You may need to add this
+        audience: {process.env.REACT_APP_AUTH0_AUDIENCE},
+        scope: "openid profile email"
       }}
     >
       <AppContent />
