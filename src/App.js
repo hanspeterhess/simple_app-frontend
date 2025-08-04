@@ -366,6 +366,11 @@ function AppContent() {
 }
 
 // Main App component with Auth0Provider
+console.log("Auth0 Domain:", process.env.REACT_APP_AUTH0_DOMAIN);
+console.log("Auth0 Client ID:", process.env.REACT_APP_AUTH0_CLIENT_ID);
+console.log("Auth0 Audience:", process.env.REACT_APP_AUTH0_AUDIENCE);
+console.log("Backend URL:", process.env.REACT_APP_BACKEND_URL);
+
 export default function App() {
   return (
     <Auth0Provider
