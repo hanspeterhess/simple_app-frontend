@@ -52,7 +52,7 @@ const s3FrontendService = {
   }
 };
 
-function App() {
+function AppContent() {
     const { 
       isAuthenticated, 
       loginWithRedirect, 
