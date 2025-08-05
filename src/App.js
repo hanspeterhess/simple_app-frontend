@@ -69,6 +69,7 @@ function AppContent() {
   const [blurredDownloadUrl, setBlurredDownloadUrl] = useState("");
   const [processingStatus, setProcessingStatus] = useState("idle");
 
+  
   const handleDownloadBlurred = async () => {
     if (!blurredDownloadUrl || !blurredFileName) {
       alert("Blurred image not ready for download.");
@@ -149,6 +150,26 @@ function AppContent() {
       }
     }
   };
+
+  useEffect(() => {
+    const notifyBackendOfLogin = async () => {
+      if (isAuthenticated) {
+        try {
+          const token = await getAccessTokenSilently();
+          const response = await axios.post(`${BACKEND_URL}/user-logged-in`, {}, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          console.log("Backend notified of login:", response.data);
+          // You could also store this state if needed
+        } catch (error) {
+          console.error("Error notifying backend of login:", error);
+        }
+      }
+    };
+    notifyBackendOfLogin();
+  }, [isAuthenticated, getAccessTokenSilently]);
 
   useEffect(() => {
     socket.on('connect', () => {
